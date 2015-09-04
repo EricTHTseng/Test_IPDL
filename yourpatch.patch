@@ -1,0 +1,613 @@
+diff --git a/dom/hello/Hello.cpp b/dom/hello/Hello.cpp
+new file mode 100644
+index 0000000..d0b867b
+--- /dev/null
++++ b/dom/hello/Hello.cpp
+@@ -0,0 +1,100 @@
++/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
++/* vim:set ts=2 sw=2 sts=2 et cindent: */
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#include "mozilla/dom/Hello.h"
++#include "mozilla/dom/HelloBinding.h"
++#include "nsPIDOMWindow.h"
++#include "TestHamanChild.h"
++#include "nsIThread.h"
++
++
++#include "mozilla/plugins/PluginModuleChild.h"
++#include "mozilla/dom/ContentChild.h"
++
++using mozilla::plugins::PluginModuleChild;
++
++namespace mozilla {
++namespace dom {
++
++
++// Only needed for refcounted objects.
++NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE(Hello, mWindow)
++NS_IMPL_CYCLE_COLLECTING_ADDREF(Hello)
++NS_IMPL_CYCLE_COLLECTING_RELEASE(Hello)
++NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(Hello)
++  NS_WRAPPERCACHE_INTERFACE_MAP_ENTRY
++  NS_INTERFACE_MAP_ENTRY(Hello)
++  NS_INTERFACE_MAP_ENTRY(nsISupports)
++NS_INTERFACE_MAP_END
++
++Hello::Hello(nsPIDOMWindow* aWindow) : mWindow(aWindow)
++{
++    // Add |MOZ_COUNT_CTOR(Hello);| for a non-refcounted object.
++}
++
++Hello::~Hello()
++{
++    // Add |MOZ_COUNT_DTOR(Hello);| for a non-refcounted object.
++}
++
++JSObject*
++Hello::WrapObject(JSContext* aCx)
++{
++  return HelloBinding::Wrap(aCx, this);
++}
++
++int32_t Hello::Add(int32_t a, int32_t b)
++{
++  return a + b;
++}
++
++int32_t Hello::Mul(int32_t a, int32_t b)
++{
++  return a * b;
++}
++
++int32_t Hello::Sub(int32_t a, int32_t b)
++{
++  return a - b;
++}
++
++double Hello::Div(int32_t a, int32_t b, ErrorResult& aRv)
++{
++  if(!b)
++  {
++    aRv.Throw(NS_ERROR_ILLEGAL_VALUE);
++  }
++  return (double)a / b;
++}
++
++void Hello::Say(nsString& aRv)
++{
++  if(NS_IsMainThread()) {
++  //  aRv = nsString(NS_LITERAL_STRING("kerkerker"));
++//    this.Lala();
++    TestHamanChild* test = new TestHamanChild();
++    test -> SendWorld();
++
++  //  XRE_GetIOMessageLoop()->PostTask(FROM_HERE, NewRunnableFunction(Hello::Lala));
++  }
++  else {
++    aRv = nsString(NS_LITERAL_STRING("aaaaar"));
++  }
++}
++/* static */
++already_AddRefed<Hello>
++Hello::Constructor(const GlobalObject& aGlobal,
++                            ErrorResult& rv)
++{
++  nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(aGlobal.GetAsSupports());
++
++  nsRefPtr<Hello> ret = new Hello(window);
++  return ret.forget();
++}
++
++
++} // namespace dom
++} // namespace mozilla
+diff --git a/dom/hello/Hello.h b/dom/hello/Hello.h
+new file mode 100644
+index 0000000..c6b1e91
+--- /dev/null
++++ b/dom/hello/Hello.h
+@@ -0,0 +1,72 @@
++/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
++/* vim:set ts=2 sw=2 sts=2 et cindent: */
++/* This Source Code Form is subject to the terms of the Mozilla Public
++ * License, v. 2.0. If a copy of the MPL was not distributed with this
++ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
++
++#ifndef mozilla_dom_Hello_h
++#define mozilla_dom_Hello_h
++
++#include "js/TypeDecls.h"
++#include "mozilla/Attributes.h"
++#include "mozilla/ErrorResult.h"
++#include "mozilla/dom/BindingDeclarations.h"
++#include "nsCycleCollectionParticipant.h"
++#include "nsWrapperCache.h"
++#include "nsCOMPtr.h"
++#include "nsPIDOMWindow.h"
++
++#define HELLO_IID \
++{ 0x220cb63e, 0xa37c, 0x4ba3, \
++ { 0x8d, 0x30, 0xfb, 0xdd, 0xeb, 0x47, 0xe0, 0x65 } }
++
++namespace mozilla {
++namespace dom {
++
++class Hello final : public nsISupports /* or NonRefcountedDOMObject if this is a non-refcounted object */,
++                    public nsWrapperCache /* Change wrapperCache in the binding configuration if you don't want this */
++{
++  nsCOMPtr<nsPIDOMWindow> mWindow;
++
++public:
++  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
++  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(Hello)
++
++  NS_DECLARE_STATIC_IID_ACCESSOR(HELLO_IID)
++
++public:
++  explicit Hello(nsPIDOMWindow* aWindow);
++ // Hello(nsPIDOMWindow* aWindow);
++
++protected:
++  virtual ~Hello();
++
++public:
++  // TODO: return something sensible here, and change the return type
++  //Hello* GetParentObject() const;
++  nsPIDOMWindow* GetParentObject() const
++  {
++    return mWindow;
++  }
++
++  virtual JSObject* WrapObject(JSContext* aCx) override;
++
++  static already_AddRefed<Hello> Constructor(const GlobalObject& global, ErrorResult& aRv);
++
++  int32_t Add(int32_t a, int32_t b);
++
++  int32_t Mul(int32_t a, int32_t b);
++
++  int32_t Sub(int32_t a, int32_t b);
++
++  double Div(int32_t a, int32_t b, ErrorResult& aRv);
++
++  void Say(nsString& aRetVal);
++};
++
++NS_DEFINE_STATIC_IID_ACCESSOR(Hello, HELLO_IID)
++
++} // namespace dom
++} // namespace mozilla
++
++#endif // mozilla_dom_Hello_h
+diff --git a/dom/hello/PTestHaman.ipdl b/dom/hello/PTestHaman.ipdl
+new file mode 100644
+index 0000000..4275483
+--- /dev/null
++++ b/dom/hello/PTestHaman.ipdl
+@@ -0,0 +1,19 @@
++include protocol PContent;
++
++namespace mozilla {
++namespace dom {
++
++  protocol PTestHaman
++  {
++    manager PContent;
++
++    child:
++        Hello();
++    parent:
++        World();
++        __delete__();
++  };
++
++
++}
++}
+diff --git a/dom/hello/TestHamanChild.cpp b/dom/hello/TestHamanChild.cpp
+new file mode 100644
+index 0000000..2d16c00
+--- /dev/null
++++ b/dom/hello/TestHamanChild.cpp
+@@ -0,0 +1,35 @@
++#include "nsXULAppAPI.h"
++#include "TestHamanChild.h"
++#include "mozilla/plugins/PluginModuleChild.h"
++#include "nsThreadUtils.h"
++
++using mozilla::plugins::PluginModuleChild;
++
++
++namespace mozilla {
++namespace dom {
++
++TestHamanChild::TestHamanChild()
++{
++    MOZ_COUNT_CTOR(TestHamanChild);
++}
++
++TestHamanChild::~TestHamanChild()
++{
++    MOZ_COUNT_DTOR(TestHamanChild);
++}
++
++void
++TestHamanChild::ActorDestroy(ActorDestroyReason aWhy)
++{
++}
++
++bool TestHamanChild::RecvHello()
++{
++   nsContentUtils::LogMessageToConsole("TestHamanChild RecvHello print");
++   return true;
++}
++
++}
++}
++
+diff --git a/dom/hello/TestHamanChild.h b/dom/hello/TestHamanChild.h
+new file mode 100644
+index 0000000..db04d6a
+--- /dev/null
++++ b/dom/hello/TestHamanChild.h
+@@ -0,0 +1,31 @@
++#ifndef mozilla_dom_TestHamanChild_h
++#define mozilla_dom_TestHamanChild_h
++
++#include "mozilla/dom/PTestHamanChild.h"
++#include "mozilla/Attributes.h"
++
++
++namespace mozilla {
++namespace dom {
++class TestHamanChild :
++    public PTestHamanChild
++{
++  public:
++    TestHamanChild();
++
++  protected:
++    virtual ~TestHamanChild();
++
++    virtual void
++    ActorDestroy(ActorDestroyReason aWhy) MOZ_OVERRIDE;
++
++    virtual bool RecvHello();
++
++    //static PTestSimpleChild* GetTestSimple();
++};
++
++} // namespace dom
++} // namespace mozilla
++
++#endif
++
+diff --git a/dom/hello/TestHamanParent.cpp b/dom/hello/TestHamanParent.cpp
+new file mode 100644
+index 0000000..64b792b
+--- /dev/null
++++ b/dom/hello/TestHamanParent.cpp
+@@ -0,0 +1,35 @@
++#include "nsXULAppAPI.h"
++#include "TestHamanParent.h"
++#include "mozilla/plugins/PluginModuleChild.h"
++#include "nsThreadUtils.h"
++
++using mozilla::plugins::PluginModuleChild;
++
++
++namespace mozilla {
++namespace dom {
++
++TestHamanParent::TestHamanParent()
++{
++    MOZ_COUNT_CTOR(TestHamanParent);
++}
++
++TestHamanParent::~TestHamanParent()
++{
++    MOZ_COUNT_DTOR(TestHamanParent);
++}
++
++void
++TestHamanParent::ActorDestroy(ActorDestroyReason aWhy)
++{
++}
++
++bool TestHamanParent::RecvWorld()
++{
++   nsContentUtils::LogMessageToConsole("TestHamanParent RecvWorld print");
++   return true;
++}
++
++}
++}
++
+diff --git a/dom/hello/TestHamanParent.h b/dom/hello/TestHamanParent.h
+new file mode 100644
+index 0000000..3a60ff6
+--- /dev/null
++++ b/dom/hello/TestHamanParent.h
+@@ -0,0 +1,36 @@
++#ifndef mozilla_dom_TestHamanParent_h
++#define mozilla_dom_TestHamanParent_h
++
++#include "mozilla/dom/PTestHamanParent.h"
++#include "mozilla/Attributes.h"
++#include "nsThreadUtils.h"
++
++namespace mozilla {
++namespace dom {
++
++class ContentParent;
++
++class TestHamanParent :
++    public PTestHamanParent
++{
++  friend class mozilla::dom::ContentParent;
++
++  public:
++    TestHamanParent();
++
++  protected:
++    virtual ~TestHamanParent();
++
++    virtual void
++  ActorDestroy(ActorDestroyReason aWhy) MOZ_OVERRIDE;
++
++    virtual bool RecvWorld();
++
++    //static PTestSimpleChild* GetTestSimple();
++};
++
++} // namespace dom
++} // namespace mozilla
++
++#endif
++
+diff --git a/dom/hello/moz.build b/dom/hello/moz.build
+new file mode 100644
+index 0000000..c29074f
+--- /dev/null
++++ b/dom/hello/moz.build
+@@ -0,0 +1,20 @@
++EXPORTS.mozilla.dom += [
++    'Hello.h',
++    'TestHamanChild.h',
++    'TestHamanParent.h',
++]
++
++UNIFIED_SOURCES += [
++    'Hello.cpp',
++    'TestHamanChild.cpp',
++    'TestHamanParent.cpp',
++]
++
++IPDL_SOURCES += [
++    'PTestHaman.ipdl',
++]
++
++FAIL_ON_WARNINGS = True
++FINAL_LIBRARY = 'xul'
++
++include('/ipc/chromium/chromium-config.mozbuild')
+diff --git a/dom/ipc/ContentChild.cpp b/dom/ipc/ContentChild.cpp
+index 18ed04a..075f9a89 100644
+--- a/dom/ipc/ContentChild.cpp
++++ b/dom/ipc/ContentChild.cpp
+@@ -16,6 +16,7 @@
+ 
+ #include "BlobChild.h"
+ #include "CrashReporterChild.h"
++#include "TestHamanChild.h"
+ #include "GeckoProfiler.h"
+ #include "TabChild.h"
+ 
+@@ -149,6 +150,7 @@
+ #include "mozilla/dom/PFileSystemRequestChild.h"
+ #include "mozilla/dom/FileSystemTaskBase.h"
+ #include "mozilla/dom/bluetooth/PBluetoothChild.h"
++#include "mozilla/dom/PTestHamanChild.h"
+ #include "mozilla/dom/PFMRadioChild.h"
+ #include "mozilla/ipc/InputStreamUtils.h"
+ 
+@@ -1700,6 +1702,19 @@ ContentChild::DeallocPBluetoothChild(PBluetoothChild* aActor)
+ #endif
+ }
+ 
++PTestHamanChild*
++ContentChild::AllocPTestHamanChild()
++{
++  return new TestHamanChild();
++}
++
++bool
++ContentChild::DeallocPTestHamanChild(PTestHamanChild* aActor)
++{
++    delete aActor;
++    return true;
++}
++
+ PFMRadioChild*
+ ContentChild::AllocPFMRadioChild()
+ {
+diff --git a/dom/ipc/ContentChild.h b/dom/ipc/ContentChild.h
+index 32f62bc..5c1da59 100644
+--- a/dom/ipc/ContentChild.h
++++ b/dom/ipc/ContentChild.h
+@@ -259,6 +259,9 @@ public:
+     virtual PBluetoothChild* AllocPBluetoothChild() MOZ_OVERRIDE;
+     virtual bool DeallocPBluetoothChild(PBluetoothChild* aActor) MOZ_OVERRIDE;
+ 
++    virtual PTestHamanChild* AllocPTestHamanChild() MOZ_OVERRIDE;
++    virtual bool DeallocPTestHamanChild(PTestHamanChild* aActor) MOZ_OVERRIDE;
++
+     virtual PFMRadioChild* AllocPFMRadioChild() MOZ_OVERRIDE;
+     virtual bool DeallocPFMRadioChild(PFMRadioChild* aActor) MOZ_OVERRIDE;
+ 
+diff --git a/dom/ipc/ContentParent.cpp b/dom/ipc/ContentParent.cpp
+index 89c0a49..f45f23c 100755
+--- a/dom/ipc/ContentParent.cpp
++++ b/dom/ipc/ContentParent.cpp
+@@ -28,6 +28,7 @@
+ #include "AudioChannelService.h"
+ #include "BlobParent.h"
+ #include "CrashReporterParent.h"
++#include "TestHamanParent.h"
+ #include "IHistory.h"
+ #include "mozIApplication.h"
+ #ifdef ACCESSIBILITY
+@@ -47,6 +48,7 @@
+ #include "mozilla/dom/PCycleCollectWithLogsParent.h"
+ #include "mozilla/dom/PFMRadioParent.h"
+ #include "mozilla/dom/PMemoryReportRequestParent.h"
++#include "mozilla/dom/PTestHamanParent.h"
+ #include "mozilla/dom/asmjscache/AsmJSCache.h"
+ #include "mozilla/dom/bluetooth/PBluetoothParent.h"
+ #include "mozilla/dom/cellbroadcast/CellBroadcastParent.h"
+@@ -218,6 +220,8 @@ using base::KillProcess;
+ #ifdef MOZ_CRASHREPORTER
+ using namespace CrashReporter;
+ #endif
++
++using namespace mozilla::dom;
+ using namespace mozilla::dom::bluetooth;
+ using namespace mozilla::dom::cellbroadcast;
+ using namespace mozilla::dom::devicestorage;
+@@ -3540,6 +3544,27 @@ ContentParent::RecvPBluetoothConstructor(PBluetoothParent* aActor)
+ #endif
+ }
+ 
++PTestHamanParent*
++ContentParent::AllocPTestHamanParent()
++{
++    return new TestHamanParent();
++}
++
++bool
++ContentParent::DeallocPTestHamanParent(PTestHamanParent* aActor)
++{
++    delete aActor;
++    return true;
++}
++
++/*
++bool
++ContentParent::RecvPTestHamanConstructor(PTestHamanParent* aActor)
++{
++    return true;
++}
++*/
++
+ PFMRadioParent*
+ ContentParent::AllocPFMRadioParent()
+ {
+diff --git a/dom/ipc/ContentParent.h b/dom/ipc/ContentParent.h
+index e7100cf..516ce98 100644
+--- a/dom/ipc/ContentParent.h
++++ b/dom/ipc/ContentParent.h
+@@ -562,6 +562,10 @@ private:
+     virtual bool DeallocPBluetoothParent(PBluetoothParent* aActor) MOZ_OVERRIDE;
+     virtual bool RecvPBluetoothConstructor(PBluetoothParent* aActor) MOZ_OVERRIDE;
+ 
++    virtual PTestHamanParent* AllocPTestHamanParent() MOZ_OVERRIDE;
++    virtual bool DeallocPTestHamanParent(PTestHamanParent* aActor) MOZ_OVERRIDE;
++    virtual bool RecvPTestHamanConstructor(PTestHamanParent* aActor) MOZ_OVERRIDE;
++
+     virtual PFMRadioParent* AllocPFMRadioParent() MOZ_OVERRIDE;
+     virtual bool DeallocPFMRadioParent(PFMRadioParent* aActor) MOZ_OVERRIDE;
+ 
+@@ -802,6 +806,7 @@ private:
+     bool mCreatedPairedMinidumps;
+ 
+     friend class CrashReporterParent;
++    friend class TestHamanParent;
+ 
+     nsRefPtr<nsConsoleService>  mConsoleService;
+     nsConsoleService* GetConsoleService();
+diff --git a/dom/ipc/PContent.ipdl b/dom/ipc/PContent.ipdl
+index b7e0462..37d255a 100644
+--- a/dom/ipc/PContent.ipdl
++++ b/dom/ipc/PContent.ipdl
+@@ -34,6 +34,7 @@ include protocol PSms;
+ include protocol PSpeechSynthesis;
+ include protocol PStorage;
+ include protocol PTelephony;
++include protocol PTestHaman;
+ include protocol PTestShell;
+ include protocol PVoicemail;
+ include protocol PJavaScript;
+@@ -373,6 +374,7 @@ prio(normal upto urgent) intr protocol PContent
+     manages PSpeechSynthesis;
+     manages PStorage;
+     manages PTelephony;
++    manages PTestHaman;
+     manages PTestShell;
+     manages PVoicemail;
+     manages PJavaScript;
+@@ -644,6 +646,8 @@ parent:
+ 
+     PBluetooth();
+ 
++    PTestHaman();
++
+     PFMRadio();
+ 
+     PAsmJSCacheEntry(OpenMode openMode, WriteParams write, Principal principal);
+diff --git a/dom/ipc/moz.build b/dom/ipc/moz.build
+index 8250d08..cc73e4f 100644
+--- a/dom/ipc/moz.build
++++ b/dom/ipc/moz.build
+@@ -111,6 +111,7 @@ LOCAL_INCLUDES += [
+     '/dom/filesystem',
+     '/dom/fmradio/ipc',
+     '/dom/geolocation',
++    '/dom/hello',
+     '/dom/media/webspeech/synth/ipc',
+     '/dom/mobilemessage/ipc',
+     '/dom/storage',
+diff --git a/dom/moz.build b/dom/moz.build
+index 271f7ff..05a16b7 100644
+--- a/dom/moz.build
++++ b/dom/moz.build
+@@ -62,6 +62,7 @@ DIRS += [
+     'filesystem',
+     'fmradio',
+     'geolocation',
++    'hello',
+     'html',
+     'json',
+     'jsurl',
+diff --git a/dom/webidl/Hello.webidl b/dom/webidl/Hello.webidl
+new file mode 100644
+index 0000000..08eeacc
+--- /dev/null
++++ b/dom/webidl/Hello.webidl
+@@ -0,0 +1,12 @@
++[Constructor]
++interface Hello {
++    long add(long a, long b);
++    long mul(long a, long b);
++    long sub(long a, long b);
++    [Throws]
++    double div(long a, long b);
++
++    DOMString say();
++};
++
++
+diff --git a/dom/webidl/moz.build b/dom/webidl/moz.build
+index cfc3d92..17cbc5e 100644
+--- a/dom/webidl/moz.build
++++ b/dom/webidl/moz.build
+@@ -146,6 +146,7 @@ WEBIDL_FILES = [
+     'GeometryUtils.webidl',
+     'GetUserMediaRequest.webidl',
+     'Headers.webidl',
++    'Hello.webidl',
+     'History.webidl',
+     'HTMLAllCollection.webidl',
+     'HTMLAnchorElement.webidl',
